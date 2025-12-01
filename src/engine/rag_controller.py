@@ -1,28 +1,26 @@
-from typing import Optional
+from typing import Optional, Tuple
 import pandas as pd
+import plotly.graph_objects as go
 from ..llm.ollama_client import OllamaHandler
 from ..vector.chroma_store import LocalVectorStore
 from ..db.sqlite_handler import SQLiteHandler
+from .viz_generator import VizGenerator
 
 class RAGController:
     def __init__(self, db_path: str):
         self.vector_store = LocalVectorStore()
         self.llm = OllamaHandler()
         self.db = SQLiteHandler(db_path)
+        self.viz = VizGenerator()
         
     def index_database(self):
-        """
-        Reads the DB schema and embeds it into the vector store.
-        """
+        """Reads the DB schema and embeds it into the vector store."""
         print("Indexing database schema...")
         full_ddl = self.db.get_schema()
-        # Simple splitting by 'CREATE TABLE' for this demo
         tables = full_ddl.split('CREATE TABLE')
         for t in tables:
             if t.strip():
-                # Re-add the split keyword and index
                 ddl = 'CREATE TABLE' + t
-                # Extract table name safely
                 try:
                     name = t.split('(')[0].strip().replace('"', '')
                     self.vector_store.add_ddl(ddl, name, "Financial Data Table")
@@ -30,15 +28,12 @@ class RAGController:
                     continue
 
     def _sanitize_sql(self, llm_response: str) -> str:
-        """
-        Cleans the LLM output to extract just the SQL.
-        """
         sql = llm_response.replace('```sql', '').replace('```', '').strip()
         return sql
 
-    def ask(self, question: str, max_retries: int = 3) -> pd.DataFrame:
+    def ask(self, question: str, max_retries: int = 3) -> Tuple[pd.DataFrame, Optional[go.Figure]]:
         """
-        The Main Loop: Retrieve -> Generate -> Validate -> Repair
+        The Main Loop: Retrieve -> Generate -> Validate -> Repair -> Visualize
         """
         # 1. Retrieval
         context = self.vector_store.query(question)
@@ -62,7 +57,9 @@ class RAGController:
             df, error = self.db.execute(current_sql)
             
             if error is None:
-                return df # Success!
+                # Success! Now Generate Viz
+                fig = self.viz.generate(df, title=question)
+                return df, fig
                 
             # 4. Self-Correction
             print(f"SQL Failed: {error}. Attempting repair...")
