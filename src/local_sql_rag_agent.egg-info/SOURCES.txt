@@ -1,0 +1,14 @@
+pyproject.toml
+src/__init__.py
+src/core/__init__.py
+src/db/__init__.py
+src/engine/__init__.py
+src/llm/__init__.py
+src/llm/ollama_client.py
+src/local_sql_rag_agent.egg-info/PKG-INFO
+src/local_sql_rag_agent.egg-info/SOURCES.txt
+src/local_sql_rag_agent.egg-info/dependency_links.txt
+src/local_sql_rag_agent.egg-info/requires.txt
+src/local_sql_rag_agent.egg-info/top_level.txt
+src/vector/__init__.py
+src/vector/chroma_store.py
